@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AURUM One — Sound, Elevated</title>
+    <style>
+      :root {
+        --bg: #070707;
+        --bg-2: #0d0d0d;
+        --panel: rgba(255, 255, 255, 0.02);
+        --brass: #d1b06f;
+        --brass-soft: #edd2a3;
+        --text: #f3f1ed;
+        --text-dim: rgba(243, 241, 237, 0.64);
+        --line: rgba(255, 255, 255, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: auto; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top, rgba(255,255,255,0.02), transparent 22%),
+          var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      img { display: block; max-width: 100%; }
+      a { color: inherit; }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 1px solid var(--brass-soft);
+        outline-offset: 4px;
+      }
+
+      #loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+        transition: opacity 0.7s ease, visibility 0.7s ease;
+      }
+      #loader.done {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      #loader .mark {
+        font-size: 12px;
+        letter-spacing: 0.5em;
+        text-transform: uppercase;
+        color: var(--brass-soft);
+      }
+      #loader .bar {
+        position: relative;
+        width: 180px;
+        height: 1px;
+        overflow: hidden;
+        background: rgba(209, 176, 111, 0.18);
+      }
+      #loader .bar i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0%;
+        background: var(--brass);
+        transition: width 0.2s ease;
+      }
+
+      #track {
+        position: relative;
+        height: 900vh;
+      }
+      #stage {
+        position: sticky;
+        top: 0;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: #080808;
+      }
+      #film {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #080808;
+      }
+      #vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at center, transparent 52%, rgba(7, 7, 7, 0.72) 78%, rgba(7, 7, 7, 0.96) 100%),
+          linear-gradient(to right, rgba(7, 7, 7, 0.85), transparent 15%, transparent 85%, rgba(7, 7, 7, 0.85));
+        z-index: 5;
+      }
+
+      .caption {
+        position: absolute;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        will-change: opacity, transform;
+      }
+      .caption h1 {
+        margin: 0;
+        font-size: clamp(44px, 7vw, 96px);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+        font-weight: 600;
+      }
+      .caption h2 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 58px);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        font-weight: 600;
+      }
+      .caption p {
+        margin: 16px 0 0;
+        max-width: 32ch;
+        font-size: clamp(15px, 1.35vw, 20px);
+        line-height: 1.6;
+        color: var(--text-dim);
+      }
+      .caption .brass { color: var(--brass-soft); }
+
+      .cap-center {
+        left: 50%;
+        top: 50%;
+        text-align: center;
+        transform: translate(-50%, -50%);
+      }
+      .cap-center p { margin-left: auto; margin-right: auto; }
+      .cap-left {
+        left: 7vw;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .cap-right {
+        right: 7vw;
+        top: 50%;
+        text-align: right;
+        transform: translateY(-50%);
+      }
+      .cap-right p { margin-left: auto; }
+      .cap-top {
+        left: 50%;
+        top: 12vh;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+      .cap-bottom {
+        left: 50%;
+        bottom: 11vh;
+        text-align: center;
+        transform: translateX(-50%);
+      }
+
+      #scroll-cue {
+        position: absolute;
+        left: 50%;
+        bottom: 4vh;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        transform: translateX(-50%);
+        color: var(--text-dim);
+        font-size: 11px;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        transition: opacity 0.5s ease;
+      }
+      #scroll-cue::after {
+        content: "";
+        display: block;
+        width: 1px;
+        height: 30px;
+        background: linear-gradient(to bottom, var(--brass), transparent);
+        animation: cue 1.8s ease-in-out infinite;
+      }
+      @keyframes cue {
+        0%, 100% { opacity: 1; transform: translateY(0); }
+        50% { opacity: 0.45; transform: translateY(8px); }
+      }
+
+      .cta {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 15px 34px;
+        border-radius: 999px;
+        border: 1px solid rgba(209, 176, 111, 0.7);
+        color: var(--brass-soft);
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 12px;
+        transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+      }
+      .cta:hover {
+        background: var(--brass);
+        border-color: var(--brass);
+        color: #090909;
+        transform: translateY(-1px);
+      }
+
+      #brandnav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 80;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 4vw;
+        background: rgba(7, 7, 7, 0.72);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-8px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+      #brandnav.on {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      #brandnav .mark {
+        letter-spacing: 0.38em;
+        text-transform: uppercase;
+        font-size: 11px;
+        color: var(--brass-soft);
+      }
+      #brandnav .links {
+        display: flex;
+        align-items: center;
+        gap: clamp(14px, 2vw, 32px);
+      }
+      #brandnav a {
+        text-decoration: none;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+      #brandnav .navcta {
+        padding: 10px 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(209, 176, 111, 0.6);
+        color: var(--brass-soft);
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        color: var(--brass-soft);
+        font-size: 11px;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.015);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .media-wrap {
+        position: relative;
+      }
+      .media-wrap img {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.04);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+        transform: scale(1.01);
+      }
+      .media-badge {
+        position: absolute;
+        right: 18px;
+        bottom: 18px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(7,7,7,0.62);
+        backdrop-filter: blur(10px);
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      main {
+        background: var(--bg);
+      }
+
+      @media (max-width: 900px) {
+        .bp-product-story .reserve-layout,
+        .technology-grid {
+          grid-template-columns: 1fr;
+        }
+        .product-visual {
+          min-height: 400px;
+        }
+        .bp-product-story .mini-metrics {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .bp-split {
+          grid-template-columns: 1fr;
+        }
+        .bp-split.flip > :first-child { order: 0; }
+        .bp-split.flip > :last-child { order: 0; }
+      }
+
+      @media (max-width: 620px) {
+        .product-visual {
+          min-height: 290px;
+          padding: 20px 12px 12px;
+        }
+        .product-visual img {
+          max-height: 240px;
+        }
+        .bp-product-story .mini-metrics {
+          gap: 12px;
+        }
+      }
+
+      .bp {
+        position: relative;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 14vh 7vw;
+      }
+      .bp .kicker {
+        margin: 0 0 18px;
+        color: var(--brass-soft);
+        font-size: 11px;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+      }
+      .bp h2 {
+        margin: 0;
+        font-size: clamp(36px, 5vw, 74px);
+        line-height: 0.96;
+        letter-spacing: -0.045em;
+        font-weight: 600;
+      }
+      .bp p.lead {
+        max-width: 42ch;
+        margin: 0;
+        color: var(--text-dim);
+        font-size: clamp(16px, 1.3vw, 20px);
+        line-height: 1.7;
+      }
+
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(26px);
+        transition: opacity 0.8s cubic-bezier(.2,.6,.2,1), transform 0.8s cubic-bezier(.2,.6,.2,1);
+      }
+      [data-reveal].in {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .bp-manifesto {
+        padding-top: 18vh;
+        padding-bottom: 18vh;
+        text-align: center;
+      }
+      .story-lockup {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .bp-manifesto h2 {
+        margin: 0 auto;
+        max-width: 12ch;
+        font-size: clamp(44px, 7vw, 112px);
+      }
+
+      .bp-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: clamp(28px, 5vw, 72px);
+        align-items: center;
+      }
+      .bp-split img {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+      }
+      .bp-split.flip > :first-child { order: 2; }
+      .bp-split.flip > :last-child { order: 1; }
+
+      .bp-stats {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: clamp(28px, 6vw, 90px);
+        text-align: center;
+      }
+      .bp-stats .num {
+        color: var(--brass-soft);
+        font-size: clamp(42px, 5vw, 72px);
+        letter-spacing: -0.04em;
+        font-weight: 600;
+      }
+      .bp-stats .lbl {
+        margin-top: 8px;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      .bp-product-story {
+        padding-top: 16vh;
+        padding-bottom: 14vh;
+      }
+      .bp-product-story .reserve-layout {
+        display: grid;
+        grid-template-columns: 1.02fr 1.18fr;
+        gap: clamp(28px, 5vw, 72px);
+        align-items: center;
+      }
+      .bp-product-story .reserve-copy {
+        max-width: 34ch;
+      }
+      .reserve-visual-wrap {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .product-visual {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 520px;
+        padding: 34px 26px 22px;
+        border-radius: 32px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255,255,255,0.06), transparent 28%),
+          linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));
+        overflow: hidden;
+      }
+      .product-visual::before {
+        content: "";
+        position: absolute;
+        inset: 12% 18% 18%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(209,176,111,0.16), transparent 62%);
+        filter: blur(28px);
+      }
+      .product-visual img {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 620px);
+        max-height: 480px;
+        object-fit: contain;
+        filter: drop-shadow(0 34px 50px rgba(0, 0, 0, 0.5));
+        transform: scale(1.02);
+        animation: productFloat 10s ease-in-out infinite alternate;
+      }
+      @keyframes productFloat {
+        0% { transform: translateY(0) scale(1.02); }
+        100% { transform: translateY(-8px) scale(1.04); }
+      }
+      .bp-product-story .mini-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        padding-top: 8px;
+      }
+      .bp-product-story .mini-metrics .metric {
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      .bp-product-story .mini-metrics .metric strong {
+        display: block;
+        color: var(--brass-soft);
+        font-size: clamp(24px, 2vw, 36px);
+        letter-spacing: -0.04em;
+      }
+      .bp-product-story .mini-metrics .metric span {
+        display: block;
+        margin-top: 8px;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+      }
+
+      .bp-technology {
+        padding-top: 14vh;
+        padding-bottom: 18vh;
+      }
+      .technology-grid {
+        display: grid;
+        grid-template-columns: 1.06fr 0.94fr;
+        gap: clamp(30px, 5vw, 90px);
+        align-items: center;
+      }
+      .technology-grid img {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 32px 90px rgba(0,0,0,0.3);
+      }
+      .tech-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+      .tech-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        color: var(--text-dim);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+      }
+      .tech-item::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--brass-soft);
+        box-shadow: 0 0 12px rgba(209,176,111,0.7);
+      }
+
+      footer.bp-footer {
+        border-top: 1px solid var(--line);
+        padding: 10vh 7vw 6vh;
+      }
+      .bp-footer .cols {
+        max-width: 1500px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 2fr repeat(3, minmax(120px, 1fr));
+        gap: clamp(28px, 5vw, 52px);
+      }
+      .bp-footer h4 {
+        margin: 0 0 16px;
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+      .bp-footer a {
+        display: block;
+        margin-bottom: 12px;
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s ease;
+      }
+      .bp-footer a:hover {
+        color: var(--text);
+      }
+      .bp-footer .brandmark {
+        color: var(--brass-soft);
+        font-size: 11px;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+      }
+      .bp-footer .fine {
+        margin-top: 42px;
+        text-align: center;
+        color: rgba(243, 241, 237, 0.42);
+        font-size: 10px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 800px) {
+        #brandnav {
+          padding: 14px 5vw;
+        }
+        #brandnav .links {
+          display: none;
+        }
+        #brandnav .mark {
+          letter-spacing: 0.25em;
+        }
+
+        .caption h1 { font-size: clamp(34px, 12vw, 60px); }
+        .caption h2 { font-size: clamp(24px, 7vw, 44px); }
+        .cap-left, .cap-right { left: 8vw; right: 8vw; }
+        .cap-right { text-align: left; }
+        .cap-right p { margin-left: 0; }
+
+        .bp-split {
+          grid-template-columns: 1fr;
+        }
+        .bp-split.flip > :first-child { order: 0; }
+        .bp-split.flip > :last-child { order: 0; }
+
+        .bp-footer .cols {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loader">
+      <div class="mark">Aurum</div>
+      <div class="bar"><i id="loadbar"></i></div>
+    </div>
+
+    <nav id="brandnav">
+      <span class="mark">Aurum</span>
+      <div class="links">
+        <a href="#story">Story</a>
+        <a href="#design">Design</a>
+        <a href="#audio">Audio</a>
+        <a href="#reserve">Reserve</a>
+        <a href="#technology">Technology</a>
+      </div>
+      <a class="navcta" href="#reserve">Reserve</a>
+    </nav>
+
+    <div id="track">
+      <div id="stage">
+        <canvas id="film"></canvas>
+        <div id="vignette"></div>
+
+        <div class="caption cap-center" data-in="-0.05" data-hold="0.02" data-out="0.05">
+          <h1>AURUM <span class="brass">One</span></h1>
+          <p>Sound, stripped back to what matters.</p>
+        </div>
+
+        <div class="caption cap-left" data-in="0.055" data-hold="0.100" data-out="0.135">
+          <h2>Quiet power.<br />Perfectly tuned.</h2>
+          <p>Minimal form. Maximum presence.</p>
+        </div>
+
+        <div class="caption cap-right" data-in="0.252" data-hold="0.310" data-out="0.365">
+          <h2>Built for<br /><span class="brass">the long listen.</span></h2>
+          <p>Precision fit, refined finish, all-day comfort.</p>
+        </div>
+
+        <div class="caption cap-left" data-in="0.42" data-hold="0.46" data-out="0.51">
+          <h2>Adaptive noise.<br />No compromise.</h2>
+          <p>Every layer tuned to the space around you.</p>
+        </div>
+
+        <div class="caption cap-right" data-in="0.545" data-hold="0.590" data-out="0.635">
+          <h2>Deep detail.<br />Clearer every time.</h2>
+          <p>Warm lows. Crisp highs. Rich full-range audio.</p>
+        </div>
+
+        <div class="caption cap-left" data-in="0.67" data-hold="0.710" data-out="0.760">
+          <h2>Seamless<br />soundstage.</h2>
+          <p>Immersive, personal, endlessly listenable.</p>
+        </div>
+
+        <div class="caption cap-right" data-in="0.790" data-hold="0.835" data-out="0.885">
+          <h2>Settle in.<br /><span class="brass">Stay there.</span></h2>
+          <p>Comfort shaped for motion, focus, and evening listening.</p>
+        </div>
+
+        <div class="caption cap-bottom" data-in="0.905" data-hold="0.970" data-out="1.08">
+          <h1>AURUM <span class="brass">One</span></h1>
+          <p>The sound of a better daily ritual.</p>
+          <a class="cta" href="#reserve">Reserve yours</a>
+        </div>
+
+        <div id="scroll-cue">Scroll</div>
+      </div>
+    </div>
+
+    <main>
+      <section class="bp bp-manifesto" id="story">
+        <div class="story-lockup" data-reveal>
+          <p class="eyebrow">Aurum</p>
+          <h2>Sound made to disappear.</h2>
+          <div class="meta-row">
+            <span class="meta-pill">Adaptive fit</span>
+            <span class="meta-pill">Premium tuned</span>
+            <span class="meta-pill">All-day comfort</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="bp" id="design">
+        <div class="bp-split">
+          <div class="copy-stack" data-reveal>
+            <p class="kicker">Design</p>
+            <h2>Nothing extra. Everything intentional.</h2>
+            <p class="lead">AURUM One is built around the rhythm of real life: compact, balanced, and unmistakably premium. Every contour is tuned for comfort, every edge for clarity, and every material choice is designed to feel refined from the first moment you wear it.</p>
+            <div class="meta-row">
+              <span class="meta-pill">Matte graphite</span>
+              <span class="meta-pill">Weighted balance</span>
+            </div>
+          </div>
+          <div class="media-wrap" data-reveal>
+            <img src="frames/ezgif-frame-120.jpg" alt="Aurum One wireless earbuds close-up" />
+            <div class="media-badge">Built for motion</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bp" id="audio">
+        <div class="bp-split flip">
+          <div class="copy-stack" data-reveal>
+            <p class="kicker">Audio</p>
+            <h2>Immersive sound, without the noise.</h2>
+            <p class="lead">Adaptive ANC quiets the room without flattening the music. A precise digital tuning curve keeps vocals intimate and instruments textured, so every listen feels rich, balanced, and alive — from a morning commute to a late-night deep-focus session.</p>
+            <div class="meta-row">
+              <span class="meta-pill">Spatial clarity</span>
+              <span class="meta-pill">Adaptive ANC</span>
+            </div>
+          </div>
+          <div class="media-wrap" data-reveal>
+            <img src="frames/ezgif-frame-210.jpg" alt="Aurum One earbuds in audio performance lighting" />
+            <div class="media-badge">Live sonic depth</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="reserve" class="bp bp-product-story">
+        <div class="reserve-layout">
+          <div class="reserve-copy" data-reveal>
+            <p class="kicker">Reserve</p>
+            <h2>Built for the rituals that define your day.</h2>
+            <p class="lead">The experience is the product: a seamless fit, whisper-quiet performance, and a sound profile that feels intimate and spacious in equal measure. AURUM One is made for motion, focus, and the long listen.</p>
+            <a class="cta" href="#footer">Pre-order now</a>
+          </div>
+
+          <div class="reserve-visual-wrap" data-reveal>
+            <div class="product-visual">
+              <img src="frames/ezgif-frame-120.jpg" alt="Aurum One wireless earbuds product shot" />
+            </div>
+
+            <div class="mini-metrics">
+              <div class="metric">
+                <strong>24h</strong>
+                <span>Battery</span>
+              </div>
+              <div class="metric">
+                <strong>42dB</strong>
+                <span>ANC</span>
+              </div>
+              <div class="metric">
+                <strong>11mm</strong>
+                <span>Driver</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="technology" class="bp bp-technology">
+        <div class="technology-grid">
+          <div data-reveal>
+            <p class="kicker">Technology</p>
+            <h2>Intelligence that keeps pace with your day.</h2>
+            <p class="lead">Seamless pairing, adaptive listening, and low-friction control create a premium experience that feels second nature. Every interaction is designed to be effortless, more attentive, and more personal than ordinary wireless audio.</p>
+            <div class="tech-list">
+              <div class="tech-item">Adaptive pairing with fast device switching</div>
+              <div class="tech-item">Context-aware noise shaping and call clarity</div>
+              <div class="tech-item">Low-latency, low-friction everyday interaction</div>
+            </div>
+          </div>
+          <div class="media-wrap" data-reveal>
+            <img src="frames/ezgif-frame-240.jpg" alt="Aurum premium technology experience" />
+            <div class="media-badge">Seamless by design</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bp-footer" id="footer">
+      <div class="cols">
+        <div>
+          <div class="brandmark">Aurum</div>
+          <p class="lead" style="margin-top: 14px; font-size: 14px; max-width: 30ch;">Designed to disappear into the day and return your focus to the sound.</p>
+        </div>
+
+        <div>
+          <h4>Product</h4>
+          <a href="#story">Story</a>
+          <a href="#design">Design</a>
+          <a href="#audio">Audio</a>
+        </div>
+
+        <div>
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Journal</a>
+          <a href="#">Support</a>
+        </div>
+
+        <div>
+          <h4>Support</h4>
+          <a href="#">Care</a>
+          <a href="#">Warranty</a>
+          <a href="#">Contact</a>
+        </div>
+      </div>
+
+      <div class="fine">© 2026 Aurum. Crafted for the long listen.</div>
+    </footer>
+
+    <script src="main.js"></script>
+  </body>
+</html>
